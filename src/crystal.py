@@ -1,8 +1,24 @@
 #!/usr/bin/env python
+#
+# Copyright (C) 2018 Xiaoyu Wang <xwang224@buffalo.edu>
+#
+# This file is part of CrystalSpells Package
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import sys, os
-
-import numpy as np
+from spells import *
 
 class Crystal(object):
 
@@ -61,8 +77,12 @@ class Crystal(object):
             output += ''.join(['%12.7f   %12.7f   %12.7f\n' % (x[0], x[1], x[2]) for x in self.lattice])
             output += '  '.join(ele_name) + '\n'
             output += '  '.join([str(x) for x in ele_num]) + '\n'
-            output += 'direct\n'
-            output += '\n'.join(['%12.7f   %12.7f   %12.7f' % (x[0], x[1], x[2]) for y in pos_list for x in y])   
+            if typ[0] == 'c' or typ[0] == 'k':
+                output += 'cartesian\n'
+                output += '\n'.join(['   '.join(['%12.7f' % z for z in self.cartesian(y)]) for x in pos_list for y in x])   
+            else:
+                output += 'direct\n'
+                output += '\n'.join(['%12.7f   %12.7f   %12.7f' % (x[0], x[1], x[2]) for y in pos_list for x in y])   
 
         if not fname:
             print output
@@ -70,6 +90,34 @@ class Crystal(object):
             with open(fname, 'w') as fid:
                 fid.write(output)
 
-s = Crystal()
-s.from_file(sys.argv[1])
-s.to()
+    def copy(self):
+        k = Crystal()
+        k.lattice = self.lattice
+        k.ion = self.ion
+        return k
+
+    def cartesian(self, pos):
+        return [self.lattice[0][0] * pos[0] + self.lattice[1][0] * pos[1] + self.lattice[2][0] * pos[2],
+                self.lattice[0][1] * pos[0] + self.lattice[1][1] * pos[1] + self.lattice[2][1] * pos[2],
+                self.lattice[0][2] * pos[0] + self.lattice[1][2] * pos[1] + self.lattice[2][2] * pos[2]]
+
+    def distance(self, i, j):
+        ab = [self.cartesian([self.ion[i][x] - self.ion[j][x] for x in range(1, 4)])] # 0: A->B
+        ab.append([ab[0][0] - self.lattice[0][0], ab[0][1] - self.lattice[0][1], ab[0][2] - self.lattice[0][2]]) # 1: A+a->B
+        ab.append([ab[0][0] - self.lattice[1][0], ab[0][1] - self.lattice[1][1], ab[0][2] - self.lattice[1][2]]) # 2: A+b->B
+        ab.append([ab[0][0] - self.lattice[2][0], ab[0][1] - self.lattice[2][1], ab[0][2] - self.lattice[2][2]]) # 3: A+c->B
+        ab.append([ab[1][0] - self.lattice[1][0], ab[1][1] - self.lattice[1][1], ab[1][2] - self.lattice[1][2]]) # 4: A+a+b->B
+        ab.append([ab[1][0] - self.lattice[2][0], ab[1][1] - self.lattice[2][1], ab[1][2] - self.lattice[2][2]]) # 5: A+a+c->B
+        ab.append([ab[2][0] - self.lattice[2][0], ab[2][1] - self.lattice[2][1], ab[2][2] - self.lattice[2][2]]) # 6: A+b+c->B
+        ab.append([ab[4][0] - self.lattice[2][0], ab[4][1] - self.lattice[2][1], ab[4][2] - self.lattice[2][2]]) # 7: A+a+b+c->B
+        return min([(x[0]**2. + x[1]**2. + x[2]**2.)**.5 for x in ab])
+
+    def adjacent_matrix(self, r_min=0., r_max=1.9):
+        n = len(self.ion)
+        adj_mat = [[0]*n for i in range(n)]
+        for i in range(n):
+            for j in range(1+i, n): 
+                 if r_min <= self.distance(i, j) <= r_max:
+                      adj_mat[i][j] = adj_mat[j][i] = 1
+        return adj_mat         
+             
