@@ -22,6 +22,12 @@ sys.path.append('/projects/academic/ezurek/xiaoyu/src/crystalspells/src/')
 
 from crystal import *
 
+if len(sys.argv) < 3:
+    r_cut = 1.80
+else:
+    r_cut = float(sys.argv[2])
+
 A = Crystal()
 A.from_file(sys.argv[1])
-print connected_components(A.adjacent_matrix())
+print len(connected_components(A.adjacent_matrix(r_max=r_cut)))
+

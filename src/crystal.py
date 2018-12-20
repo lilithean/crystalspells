@@ -102,17 +102,19 @@ class Crystal(object):
                 self.lattice[0][2] * pos[0] + self.lattice[1][2] * pos[1] + self.lattice[2][2] * pos[2]]
 
     def distance(self, i, j):
-        ab = [self.cartesian([self.ion[i][x] - self.ion[j][x] for x in range(1, 4)])] # 0: A->B
-        ab.append([ab[0][0] - self.lattice[0][0], ab[0][1] - self.lattice[0][1], ab[0][2] - self.lattice[0][2]]) # 1: A+a->B
-        ab.append([ab[0][0] - self.lattice[1][0], ab[0][1] - self.lattice[1][1], ab[0][2] - self.lattice[1][2]]) # 2: A+b->B
-        ab.append([ab[0][0] - self.lattice[2][0], ab[0][1] - self.lattice[2][1], ab[0][2] - self.lattice[2][2]]) # 3: A+c->B
-        ab.append([ab[1][0] - self.lattice[1][0], ab[1][1] - self.lattice[1][1], ab[1][2] - self.lattice[1][2]]) # 4: A+a+b->B
-        ab.append([ab[1][0] - self.lattice[2][0], ab[1][1] - self.lattice[2][1], ab[1][2] - self.lattice[2][2]]) # 5: A+a+c->B
-        ab.append([ab[2][0] - self.lattice[2][0], ab[2][1] - self.lattice[2][1], ab[2][2] - self.lattice[2][2]]) # 6: A+b+c->B
-        ab.append([ab[4][0] - self.lattice[2][0], ab[4][1] - self.lattice[2][1], ab[4][2] - self.lattice[2][2]]) # 7: A+a+b+c->B
+        ab_frac = [self.ion[i][x] - self.ion[j][x] for x in range(1, 4)]
+        sgn = [1. + -2.*float(x < 0) for x in ab_frac]
+        ab = [self.cartesian(ab_frac)] # 0: A->B
+        ab.append([ab[0][0] - self.lattice[0][0]*sgn[0], ab[0][1] - self.lattice[0][1]*sgn[0], ab[0][2] - self.lattice[0][2]*sgn[0]]) # 1: A+a->B
+        ab.append([ab[0][0] - self.lattice[1][0]*sgn[1], ab[0][1] - self.lattice[1][1]*sgn[1], ab[0][2] - self.lattice[1][2]*sgn[1]]) # 2: A+b->B
+        ab.append([ab[0][0] - self.lattice[2][0]*sgn[2], ab[0][1] - self.lattice[2][1]*sgn[2], ab[0][2] - self.lattice[2][2]*sgn[2]]) # 3: A+c->B
+        ab.append([ab[1][0] - self.lattice[1][0]*sgn[1], ab[1][1] - self.lattice[1][1]*sgn[1], ab[1][2] - self.lattice[1][2]*sgn[1]]) # 4: A+a+b->B
+        ab.append([ab[1][0] - self.lattice[2][0]*sgn[2], ab[1][1] - self.lattice[2][1]*sgn[2], ab[1][2] - self.lattice[2][2]*sgn[2]]) # 5: A+a+c->B
+        ab.append([ab[2][0] - self.lattice[2][0]*sgn[2], ab[2][1] - self.lattice[2][1]*sgn[2], ab[2][2] - self.lattice[2][2]*sgn[2]]) # 6: A+b+c->B
+        ab.append([ab[4][0] - self.lattice[2][0]*sgn[2], ab[4][1] - self.lattice[2][1]*sgn[2], ab[4][2] - self.lattice[2][2]*sgn[2]]) # 7: A+a+b+c->B
         return min([(x[0]**2. + x[1]**2. + x[2]**2.)**.5 for x in ab])
 
-    def adjacent_matrix(self, r_min=0., r_max=1.9):
+    def adjacent_matrix(self, r_min=0., r_max=1.8):
         n = len(self.ion)
         adj_mat = [[0]*n for i in range(n)]
         for i in range(n):
