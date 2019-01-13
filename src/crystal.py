@@ -123,3 +123,30 @@ class Crystal(object):
                       adj_mat[i][j] = adj_mat[j][i] = 1
         return adj_mat         
              
+    def super_cell(self, scale=[2, 2, 2]):
+        k = self.copy()
+        k.lattice = [[self.lattice[y][x] * scale[y] for x in range(3)] for y in range(3)]
+        k.ion = [[x[0], (x[1]+u)/scale[0], (x[2]+v)/scale[1], (x[3]+w)/scale[2]] for x in self.ion for u in range(scale[0]) for v in range(scale[1]) for w in range(scale[2])] 
+        return k
+
+    def reciprocal_lattice(self, two_pi=False):
+        # In vasp 2pi is in the wave vector
+        # b1 = (a2_a3)/(a1 (a2_a3))
+        # b2 =  a3_a1   a2  a3_a1
+        # b3 =  a1_a2   a3  a1_a2
+        numerator = [cross_prod(self.lattice[1], self.lattice[2]), cross_prod(self.lattice[2], self.lattice[0]), cross_prod(self.lattice[0], self.lattice[1])]
+        denominator = [dot_prod(self.lattice[x], numerator[x]) for x in range(3)]
+        return [[numerator[x][y]/denominator[x] for y in range(3)] for x in range(3)]
+
+    def k_mesh(self, n_per_distance=50, odd=True):
+        recip_len = [(x[0]**2 + x[1]**2 + x[2]**2)**.5 for x in self.reciprocal_lattice()]
+        kpts_vasp = [round(max([1., n_per_distance*recip_len[x]])) for x in range(3)]
+        kpts_total = kpts_vasp[0]*kpts_vasp[1]*kpts_vasp[2]
+        #max_kpts = max(kpts_vasp)
+        #which_lat = kpts_vasp.index(max_kpts)
+        ratio = [1/sum([self.lattice[x][y]**2 for y in range(3)])**0.5 for x in range(3)]  
+        s = (kpts_total/ratio[0]/ratio[1]/ratio[2])**0.333333333333
+        k_mesh = [-(-s*ratio[x] // 1) for x in range(3)]
+        if odd:
+            k_mesh = [k_mesh[x] + (not (k_mesh[x] % 2)) for x in range(3)]
+        return k_mesh

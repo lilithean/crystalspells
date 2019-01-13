@@ -19,16 +19,15 @@
 
 import sys
 sys.path.append('/projects/academic/ezurek/xiaoyu/src/crystalspells/src/')
-
+import numpy as np
 from crystal import *
 
 if len(sys.argv) < 3:
-    r_cut = 2.00
+    length = 50
 else:
-    r_cut = float(sys.argv[2])
+    length = int(sys.argv[2])
 
 A = Crystal()
 A.from_file(sys.argv[1])
-B = A.super_cell()
-print len(connected_components(B.adjacent_matrix(r_max=r_cut)))
-
+kpts = A.k_mesh(length)
+print " %i    %i    %i" % (kpts[0], kpts[1], kpts[2])

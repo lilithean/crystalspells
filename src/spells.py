@@ -31,6 +31,14 @@ class Elastic(object):
         strain = []
         stress = []
 
+def dot_prod(a, b):
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+
+
+def cross_prod(a, b):
+    # a x b = (a2b3 - a3b2)i - (a1b3 - a3b1)j + (a1b2 - a2b1)k
+    return [a[1]*b[2] - a[2]*b[1], -a[0]*b[2] + a[2]*b[0], a[0]*b[1] - a[1]*b[0]]
+
 def product3(A, B):
     return [[A[0][0]*B[0][0]+A[0][1]*B[1][0]+A[0][2]*B[2][0],
              A[0][0]*B[0][1]+A[0][1]*B[1][1]+A[0][2]*B[2][1],
@@ -43,15 +51,19 @@ def product3(A, B):
              A[2][0]*B[0][2]+A[2][1]*B[1][2]+A[2][2]*B[2][2]]]
              
 def connected_components(adj_mat):
+    """
+    This is a simple dfs algorithm to check connectivity
+
+    """
 
     visited = [False] * len(adj_mat)
     cluster = []
 
-    def dfs(i):
-        visited[i] = True
-        cluster[-1].append(i)
+    def dfs(vertex):
+        visited[vertex] = True
+        cluster[-1].append(vertex)
         for j in range(len(adj_mat)):
-            if adj_mat[i][j] == 1:
+            if adj_mat[vertex][j] == 1:
                 if not visited[j]:
                     dfs(j)
 
@@ -61,5 +73,27 @@ def connected_components(adj_mat):
             dfs(i)
 
     return cluster
+
+def cycle(adj_mat, vertex):
+    """
+    This is a simple dfs algorithm to find cycles around a given vertex
+    """
+
+    visited = [0] * len(adj_mat)
+    visited[vertex] = 1
+
+    def bfs(vertex, g=2):
+        for j in range(len(adj_mat)):
+            if adj_mat[vertex][j] == 1:
+                if visited[j] == 0:
+                    visited[j] == g
+                    dfs(j, g+1)
+                elif visited[j] == g:
+                    pass
+
+
+
+
+
 
 
