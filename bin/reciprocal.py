@@ -22,11 +22,6 @@ sys.path.append('/projects/academic/ezurek/xiaoyu/src/crystalspells/src/')
 import numpy as np
 from crystal import *
 
-if len(sys.argv) < 3:
-    r_cut = 2.00
-else:
-    r_cut = float(sys.argv[2])
-
 A = Crystal()
 A.from_file(sys.argv[1])
 print A.reciprocal_lattice()
