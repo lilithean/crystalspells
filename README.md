@@ -25,7 +25,7 @@ Currently I have executables below in the bin folder:
    This one basically do two things: \
    first, do the same task as vasp does on generating a [fully automatic meshgrid](https://cms.mpi.univie.ac.at/vasp/vasp/Automatic_k_mesh_generation.html). \
    second, redistribute the same number of total k-points in propotional to the inverse of the length of the real space lattice.\
-   This will avoid the [VERY BAD NEWS of IBZKPT](https://www.error.wiki/VERY_BAD_NEWS!_internal_error_in_subroutine_IBZKPT) \
+   This will avoid the [VERY BAD NEWS of IBZKPT](https://www.error.wiki/VERY_BAD_NEWS!_internal_error_in_subroutine_IBZKPT)
    
 
 *Xiaoyu Wang* (xwang224@buffalo.edu) \
