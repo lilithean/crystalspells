@@ -22,12 +22,14 @@ sys.path.append('/projects/academic/ezurek/xiaoyu/src/crystalspells/src/')
 import numpy as np
 from crystal import *
 
-if len(sys.argv) < 3:
-    length = 50
-else:
-    length = int(sys.argv[2])
-
+vec=[0.154308, 0.500000, 0.000000]
+scl=4.254532
+vec=[x/scl for x in vec]
 A = Crystal()
 A.from_file(sys.argv[1])
-kpts = A.k_mesh(length)
-print " %i    %i    %i" % (kpts[0], kpts[1], kpts[2])
+rec=A.reciprocal_lattice()
+rec=np.linalg.inv(rec)
+x = vec[0]*rec[0][0]+vec[1]*rec[1][0]+vec[2]*rec[2][0]
+y = vec[0]*rec[0][1]+vec[1]*rec[1][1]+vec[2]*rec[2][1]
+z = vec[0]*rec[0][2]+vec[1]*rec[1][2]+vec[2]*rec[2][2]
+print "%8.6f %8.6f %8.6f" % (x,y,z)

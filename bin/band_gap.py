@@ -1,59 +1,71 @@
 #!/usr/bin/env python
-#
-# Copyright (C) 2019 Xiaoyu Wang <xwang224@buffalo.edu>
-#
-# This file is part of CrystalSpells Package
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
-# instruction:
-# A. First you should have the following files in the folder:
-# 1. EIGENVAL: 
-#   Will read eigenvalues from the band-structure calculation.
-#
-# 2. DOSCAR: 
-#   Will read density of states from the mesh grid calculation. 
-#   Also read fermi level, and all energies will be shifted. 
-#   Can use a band-structure calculation DOSCAR instead
-#
-
 import sys
-sys.path.append('/projects/academic/ezurek/xiaoyu/src/crystalspells/src/')
 import numpy as np
-from crystal import *
 
+tol = 0.005
+
+print "\nmessage: interpolation is not achieved in this script, please use a dense k-mesh else take your own risk\n"
+
+print "_(:3 general information )_"
 # read eigenvalues from eigenval
 with open('EIGENVAL', 'r') as fid:
     eigen_data = fid.readlines()
 n_elec, n_kpts, n_bnd = (int(x) for x in eigen_data[5].split())
 kpoints = [[float(x) for x in y.split()[:3]] for y in eigen_data[7::n_bnd+2]]
+print "  n_bnds = %i\n  n_kpts = %i\n  n_elec = %i" % (n_bnd, n_kpts, n_elec)
 
 # read fermi-level and dos from doscar 
 with open('DOSCAR', 'r') as fid:
     dos_data = fid.readlines()
     e_fermi = float(dos_data[5].split()[3])
- 
-cbm = e_fermi + 100.0
-vbm = e_fermi - 100.0
+print "  e_fermi = %.3f eV\n" % e_fermi
+
+bands = []
 for i in range(n_bnd):
-    j = 8 + i*(n_bnd+2)
-    k = 0
-    while (k < n_bnd) and (float(eigen_data[j+k].split()[1]) < e_fermi):
-         k += 1
-    if cbm > float(eigen_data[j+k].split()[1]):
-        cbm = float(eigen_data[j+k].split()[1]) 
-    if vbm < float(eigen_data[j+k-1].split()[1]):
-        vbm = float(eigen_data[j+k-1].split()[1])
-print cbm, vbm
-print cbm-vbm
+    bands.append([float(eigen_data[8+i+x*(n_bnd+2)].split()[1]) for x in range(n_kpts)])
+
+print "_(:3 band list )_"
+print "message: energies below are already shifted to Fermi level"
+print "%3s   %7s %8s %8s %8s   %7s %8s %8s %8s" % ("#", "e_min", "kx", "ky", "kz", "e_max", "kx", "ky", "kz")
+for i in range(n_bnd):
+    b_max = max(bands[i])
+    b_min = min(bands[i])
+    wi = bands[i].index(b_min)
+    wj = bands[i].index(b_max)
+    output = "%3i" % (i + 1)
+    output += "   %7.3f" % (b_min-e_fermi)
+    output += " %8.5f %8.5f %8.5f" % (kpoints[wi][0], kpoints[wi][1], kpoints[wi][2])
+    output += "   %7.3f" % (b_max-e_fermi)
+    output += " %8.5f %8.5f %8.5f" % (kpoints[wj][0], kpoints[wj][1], kpoints[wj][2])
+    print output
+print
+
+print "_(:3 frontier orbital )_"
+band_type = [] # positive = ib, 0 = vb, -1 = cb 
+for i in range(n_bnd):
+    if max(bands[i]) <= e_fermi + tol:
+        band_type.append(i+1)
+    elif min(bands[i]) - tol < e_fermi < max(bands[i]) + tol:
+        band_type.append(0)
+    elif min(bands[i]) >= e_fermi - tol:
+        band_type.append(-1)
+
+if any([x==0 for x in band_type]):
+    print "  ! conductor"
+    print "  bg= 0.000"
+    
+else:
+    vb = max(band_type)-1
+    cb = max(band_type)
+    vbm = sorted(list(enumerate(bands[vb])), key=lambda x: -x[1])
+    cbm = sorted(list(enumerate(bands[cb])), key=lambda x: x[1])
+    bg = cbm[0][1] - vbm[0][1]
+
+    print "     cbm            kx         ky         kz         vbe" 
+    for i in cbm[:10]:
+        print "%  8.3f      %8.5f   %8.5f   %8.5f    %8.3f" % (i[1]-e_fermi, kpoints[i[0]][0], kpoints[i[0]][1], kpoints[i[0]][2], bands[vb][i[0]]-e_fermi)
+    
+    print "     vbm            kx         ky         kz         cbe"
+    for i in vbm[:10]:
+        print "%  8.3f      %8.5f   %8.5f   %8.5f    %8.3f" % (i[1]-e_fermi, kpoints[i[0]][0], kpoints[i[0]][1], kpoints[i[0]][2], bands[cb][i[0]]-e_fermi)
+    print "bg= %.3f" % bg

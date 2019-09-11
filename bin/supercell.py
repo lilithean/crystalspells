@@ -23,6 +23,6 @@ sys.path.append('/projects/academic/ezurek/xiaoyu/src/crystalspells/src/')
 from crystal import *
 A = Crystal()
 A.from_file(sys.argv[1])
-B = A.super_cell()
+B = A.super_cell([4, 2, 1])
 B.to()
 

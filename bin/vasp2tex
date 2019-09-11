@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+import os
+import sys
+sys.path.append('/projects/academic/ezurek/xiaoyu/src/crystalspells/src/')
+from crystal import *
+import subprocess
+from glob import glob
+
+_lat_tol = 1e-4
+_atom_tol = 1e-3
+_hartree_to_eV = 27.21138602
+_findsym_path = '/projects/academic/ezurek/xiaoyu/src/isobyu/'
+_findsym_exe = '/projects/academic/ezurek/xiaoyu/src/isobyu/findsym'
+
+_table_head = '\\begin{table}[ht!]\n\\centering\n'
+_table_end = '\\end{table}\n'
+_tabular_head = '\\begin{tabular}{| c | c |}\n'
+_tabular_end = '\\hline\n\\end{tabular}\n'
+
+def _enthalpy(structure, ent, esymbol='ev', usymbol='cell'):
+# enthalpy read from vasp OSZICAR in eV
+    es = 'e$V$'
+    us = 'c$e$l$l$'
+    if esymbol == 'eh':
+        ent = ent / _hartree_to_eV
+        es = 'E$_h$'
+    if usymbol == 'a':
+        ent = ent / sum(structure.atomNumber)
+        us = 'a$t$o$m$'
+    output = '\\hline\n'
+    output += '\\textbf{Enthalpy (%s/%s)} & \\textbf{%.5f} \\\\\n' % (es, us, ent)
+    return output
+
+def _structure(structure):
+    structure.to('fdsm', fname='fstemp.i', tol1=_lat_tol, tol2=_atom_tol)
+    try:
+        fslines = subprocess.check_output([_findsym_exe, 'fstemp.i'], stderr=subprocess.STDOUT).split('\n')
+    except Exception:
+        print(" An exception occurs while running findsym, currently I'm using FINDSYM Version 6.0 with a keyword specification input file, old version findsym may not support this type of input, I'm sorry for any inconvenience my bring to you.")
+        sys.exit(-1)
+    atoms = []
+    for l in fslines:
+        j = l.split()
+        if not len(j):
+            continue
+        if j[0] == '_cell_length_a':
+            a = float(j[1])
+        if j[0] == '_cell_length_b':
+            b = float(j[1])
+        if j[0] == '_cell_length_c':
+            c = float(j[1])
+        if j[0] == '_cell_angle_alpha':
+            alpha = float(j[1])
+        if j[0] == '_cell_angle_beta':
+            beta = float(j[1])
+        if j[0] == '_cell_angle_gamma':
+            gamma = float(j[1])
+        if j[0] == '_atom_site_occupancy':
+            atoms = fslines[fslines.index(l)+1:-3]
+            break
+    output = '\\hline\n'
+    output += 'a, b, c (\\AA{})&        %.3f   %.3f   %.3f \\\\\n' % (a, b, c)
+    output += '\\hline\n'
+    output += '$\\alpha,\\beta,\\gamma$ ($\\Theta$)        &       %.2f %.2f %.2f \\\\\n' % (alpha, beta, gamma)
+    output += '\\hline\n'
+    for atom in atoms:
+        a = atom.split()
+        output += ' %s (%s%s)   &  %7s %7s %7s  \\\\\n' % (a[1], a[2], a[3], a[4], a[5], a[6])
+    try:
+        os.remove('fstemp.i')
+        os.remove('findsym.log')
+    except Exception:
+        pass
+    return output
+
+if __name__ == '__main__':
+    os.environ['ISODATA']=_findsym_path
+    if os.path.isfile(sys.argv[1]):
+        structure = Crystal()
+        structure.from_file(sys.argv[1])
+        print _table_head+_tabular_head+_structure(structure)+_tabular_end+_table_end
+        sys.exit(-1)
+    elif os.path.isdir(sys.argv[1]):
+        structure = kl.ReadVasp(sys.argv[1]+'/CONTCAR')
+        with open(sys.argv[1]+'/OSZICAR') as f:
+            enthalpy = float((f.readlines()[-1]).split()[2])
+        output = _table_head
+        output += _tabular_head
+        output += _enthalpy(structure, enthalpy, 'eh', 'a')
+        output += _structure(structure)
+        output += _tabular_end
+        output += _table_end
+        print output

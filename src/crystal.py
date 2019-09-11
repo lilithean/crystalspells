@@ -50,9 +50,25 @@ class Crystal(object):
                         self.ion.append([ele_name[i]]+[float(x)*scale for x in s[k].split()[:3]])
                         k += 1
             elif s[7][0].lower() == 'c':
+                print 'cartesian format is not supported'
                 sys.exit(-1)
 
-    def to(self, fname=False, typ='d', fmt='vasp'):
+    def group_ion(self):
+        ele_name = []
+        ele_num = []
+        pos_list = []
+        for i in self.ion:
+            if i[0] in ele_name:
+                j = ele_name.index(i[0])
+                ele_num[j] += 1
+                pos_list[j].append(i[1:])
+            else:
+                ele_name.append(i[0])
+                ele_num.append(1)
+                pos_list.append([i[1:]])
+        return ele_name, ele_num, pos_list
+
+    def to(self, fmt='vasp', fname=False, typ='d', tol1=0.00001, tol2=0.001):
 
         fmt = fmt.lower()
         typ = typ.lower()
@@ -83,6 +99,23 @@ class Crystal(object):
             else:
                 output += 'direct\n'
                 output += '\n'.join(['%12.7f   %12.7f   %12.7f' % (x[0], x[1], x[2]) for y in pos_list for x in y])   
+
+        if fmt in ('fdsm', 'fndsym', 'findsym'):
+            output += '!useKeyWords\n'
+            output += '!title\n'
+            output += 'crystalspell generated fndsym input\n'
+            output += '!latticeTolerance\n'
+            output += str(tol1) + '\n'
+            output += '!atomicPositionTolerance\n'
+            output += str(tol2) + '\n'
+            output += '!latticeBasisVectors\n'
+            output += ''.join(['%12.7f   %12.7f   %12.7f\n' % (x[0], x[1], x[2]) for x in self.lattice])
+            output += '!atomCount\n'
+            output += str(len(self.ion)) + '\n'
+            output += '!atomType\n'
+            output += ' '.join(x[0] for x in self.ion) + '\n'
+            output += '!atomPosition\n'
+            output += '\n'.join(['%12.7f   %12.7f   %12.7f' % (x[1], x[2], x[3]) for x in self.ion])   
 
         if not fname:
             print output
@@ -130,7 +163,6 @@ class Crystal(object):
         return k
 
     def reciprocal_lattice(self, two_pi=False):
-        # In vasp 2pi is in the wave vector
         # b1 = (a2_a3)/(a1 (a2_a3))
         # b2 =  a3_a1   a2  a3_a1
         # b3 =  a1_a2   a3  a1_a2
@@ -138,7 +170,7 @@ class Crystal(object):
         denominator = [dot_prod(self.lattice[x], numerator[x]) for x in range(3)]
         return [[numerator[x][y]/denominator[x] for y in range(3)] for x in range(3)]
 
-    def k_mesh(self, n_per_distance=50, odd=True):
+    def k_mesh(self, n_per_distance=50, odd=False):
         recip_len = [(x[0]**2 + x[1]**2 + x[2]**2)**.5 for x in self.reciprocal_lattice()]
         kpts_vasp = [round(max([1., n_per_distance*recip_len[x]])) for x in range(3)]
         kpts_total = kpts_vasp[0]*kpts_vasp[1]*kpts_vasp[2]
@@ -150,3 +182,8 @@ class Crystal(object):
         if odd:
             k_mesh = [k_mesh[x] + (not (k_mesh[x] % 2)) for x in range(3)]
         return k_mesh
+
+    def vasp_k_mesh(self, n_per_distance=50):
+        recip_len = [(x[0]**2 + x[1]**2 + x[2]**2)**.5 for x in self.reciprocal_lattice()]
+        kpts_vasp = [round(max([1., n_per_distance*recip_len[x]])) for x in range(3)]
+        return kpts_vasp
