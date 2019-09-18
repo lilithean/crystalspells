@@ -18,7 +18,7 @@
 #
 
 import sys
-sys.path.append('/projects/academic/ezurek/xiaoyu/src/crystalspells/src/')
+sys.path.append('/home/xwang224/src/crystalspells/src/')
 
 from crystal import *
 A = Crystal()
@@ -34,4 +34,4 @@ for i in range(len(A.ion)):
     for j in range(i+1, len(A.ion)):
         d = A.distance(i, j)
         if d <= r_cut:
-            print "C%i      C%i" % (i, j)
+            print "%3s %3i   %3s %3i    %6.4f" % (A.ion[i][0], i, A.ion[j][0], j, d)
